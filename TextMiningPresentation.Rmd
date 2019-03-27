@@ -1,0 +1,38 @@
+---
+title: "R Capstone Project Text Predictor"
+author: "JYao"
+date: "3/25/2019"
+output: slidy_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Overview
+
+- The Capstone Project is to create an App that predicts the next word of the entered phrase.
+- The word is predicted based on text from blogs, news, and twitter from SwiftKey.
+- This App is built in Rstudio and runs in Shiny.
+- Text prediction is a common application used in internet search and smartphones for example. 
+
+## Backoff Model and N-gram
+
+- *N-Grams* are a sequence of N words. This App uses bi, tri, and tetra-grams built from the text files.
+- This App uses the concept of the *Markov Chain*, where the probability of the predicted word is dependent only on the N-1 previous words of the N-gram.
+- This App uses the *Stupid Backoff Model*, using 4-gram, then 3-gram, then 2-gram when available. 
+
+## Model Training
+
+- The training data came from the blogs, twitter, and news dataset from SwiftKey.
+- The N-grams were generated using the `tidytext` package. Text were converted into lower case, punctuations removed, and converted into N-grams. 
+- Only the N-gram with the highest frequency was tabulated for this App. In future applications, perhaps the top 4-5 options will be kept.
+- The `data.table` package was used to search for the N-gram quickly. 
+
+## App and Code
+
+- To use the App, input the phrase and press the submit button to get the prediction for the next word.
+- The code for generating all parts of the App is below.
+https://github.com/jiangweiyao/RCapstoneProject
+- The App is running at
+https://jiangwei.shinyapps.io/RCapstoneProject/

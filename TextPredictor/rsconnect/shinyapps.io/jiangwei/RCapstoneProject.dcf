@@ -1,0 +1,12 @@
+name: RCapstoneProject
+title: RCapstoneProject
+username:
+account: jiangwei
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 819044
+bundleId: 1969273
+url: https://jiangwei.shinyapps.io/RCapstoneProject/
+when: 1553720312.09558
+asMultiple: FALSE
+asStatic: FALSE

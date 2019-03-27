@@ -1,0 +1,138 @@
+---
+title: "Capstone Project Week 2 Report"
+output: html_document
+author: JYao
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Text Prediction Algorithm
+
+The end goal of the Data Science Capstone Project is to build a shiny app that predicts the next word based on the entered text. The project covers building the algorith to building the app. This report is a exploratory analysis of data.
+
+## 1. File information.
+
+A preliminary analysis of the files (en_US.twitter.txt, en_US.news.txt, en_US.blogs.txt) was examined using the `wc` command in linux.
+
+| File          | Words         | Lines       | Bytes       |
+| --------------| ------------- | ----------- | ----------- |
+| Twitter       | 30373559      | 2360148     | 167105338   |
+| News          | 34365936      | 1010242     | 205811889   |
+| Blog          | 37334117      | 899288      | 210160014   |
+
+
+## 2. What are the distribution of word frequencies?
+ 
+The analysis is performed using the tidytext package. All three files are read in, numbers removed, and tokenized into individual words. Tokenization turns all words into lower case. Analysis is performed with stopwords (common words like a, and, i) included and excluded. The analysis showed that stopwords are the most common words for the corpora. 
+
+```{r loadfile, echo = FALSE, message = FALSE, cache = TRUE}
+library(tidyverse)
+library(tidytext)
+data(stop_words)
+
+setwd("~/RCapstoneProject/")
+##tbl <- list.files(path = "~/RCapstoneProject/final/en_US",pattern = "*.txt") %>% 
+##    map_chr(~ read_file(.)) %>% 
+##    data_frame(text = .)
+
+read_folder <- function(infolder) {
+  tibble(file = dir(infolder, full.names = TRUE)) %>%
+    mutate(text = map(file, read_lines)) %>%
+    transmute(id = basename(file), text) %>%
+    unnest(text)
+}
+
+tbl <- read_folder("~/RCapstoneProject/final/en_US")
+word_count <- tbl %>% unnest_tokens(word, text) %>% 
+  filter(!str_detect(word, "^[0-9]*$")) %>% count(word, sort = TRUE)
+
+word_count_no_stop_words <- tbl %>% 
+  unnest_tokens(word, text) %>% 
+  filter(!str_detect(word, "^[0-9]*$")) %>%
+  anti_join(stop_words) %>% count(word, sort = TRUE)
+```
+
+```{r wordgraph}
+library(ggplot2)
+ggplot(data = word_count[1:20,], aes(x = word, y = n))+geom_bar(stat = "identity")+xlab("words")+ylab("counts")+ggtitle("Top 20 words including stopwords")+scale_x_discrete(limits=word_count[1:20,]$word)+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(data = word_count_no_stop_words[1:20,], aes(x = word, y = n))+geom_bar(stat = "identity")+xlab("words")+ylab("counts")+ggtitle("Top 20 words without stopwords")+scale_x_discrete(limits=word_count_no_stop_words[1:20,]$word)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+## 3. What are the frequencies of 2-grams and 3 grams in the dataset
+
+A common method for text prediction is the n-gram and roll 1 back method. Therefore 2-grams and 3-grams were counted from the included text, and top 2-grams and 3-grams are plotted. 
+
+```{r ngram, echo = FALSE, message = FALSE}
+library(tidyverse)
+library(tidytext)
+
+news_bigrams <- tbl %>% 
+  unnest_tokens(bigram, text, token =  "ngrams", n = 2)
+news_bigram_count <- news_bigrams %>%  count(bigram, sort = TRUE)
+news_bigram_count_total <- sum(news_bigram_count$n)
+news_bigram_count <- news_bigram_count %>% mutate(frequency = news_bigram_count$n/news_bigram_count_total)
+
+news_trigrams <- tbl %>% 
+  unnest_tokens(trigram, text, token = "ngrams", n = 3)
+news_trigram_count <- news_trigrams %>%  count(trigram, sort = TRUE)
+news_trigram_count_total <- sum(news_trigram_count$n)
+news_trigram_count <- news_trigram_count %>% mutate(frequency = news_trigram_count$n/news_trigram_count_total)
+```
+
+```{r ngramgraph}
+library(ggplot2)
+ggplot(data = news_bigram_count[1:20,], aes(x = bigram, y = frequency))+geom_bar(stat = "identity")+xlab("words")+ylab("frequency")+ggtitle("Top 20 2-grams")+scale_x_discrete(limits=news_bigram_count[1:20,]$bigram) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(data = news_trigram_count[1:20,], aes(x = trigram, y = frequency))+geom_bar(stat = "identity")+xlab("words")+ylab("frequency")+ggtitle("Top 20 3-grams")+scale_x_discrete(limits=news_trigram_count[1:20,]$trigram) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+## 4. How many unique words do you need in a frequency sorted dictionary to cover 50% of all word instances in the language? 90%?
+### For word count set with stop words.
+```{r wordcount5090}
+word_count_total <- sum(word_count$n)
+word_count <- word_count %>% mutate(csum = cumsum(word_count$n)/word_count_total)
+
+ggplot(data = word_count, aes(x = seq(1,dim(word_count)[1],1), y = csum))+geom_line()+scale_x_log10()+xlab("Term ranking")+ylab("Cumulative Frequency")
+
+sum(word_count$csum < 0.5)
+sum(word_count$csum < 0.9)
+```
+#### It takes 156 (155+1) words to cover 50% of all word instance in the word count with stop words. It takes 7925 words to cover 90% of all word instances.
+### For word count set without stop words.
+```{r wordcountnostopwords5090}
+word_count_no_stop_words_total <- sum(word_count_no_stop_words$n)
+word_count_no_stop_words <- word_count_no_stop_words %>% mutate(csum = cumsum(word_count_no_stop_words$n)/word_count_no_stop_words_total)
+
+ggplot(data = word_count_no_stop_words, aes(x = seq(1,dim(word_count_no_stop_words)[1],1), y = csum))+geom_line()+scale_x_log10()+xlab("Term ranking")+ylab("Cumulative Frequency")
+
+sum(word_count_no_stop_words$csum < 0.5)
+sum(word_count_no_stop_words$csum < 0.9)
+```
+#### It takes 1691 words to cover 50% of all word instance in the word count without stop words. It takes 22350 words to cover 90% of all word instances.
+#### Stop words are the most common occuring words in the English language. This makes sense since stop words are required to build sentence structures.
+
+## 5. How do you evaluate how many of the words come from foreign langauges?
+Through dictionary matching of some kind. For example, we can calculate the number of non-English words by matching words with an English dictionary. The words that don't match are non-English. Can repeat this with various other languages.
+
+## 6. Can you think of a way to increase the coverage -- identifying words that may not be in the corpora or using a smaller number of words in the dictionary to cover the same number of phrases.
+####Stemming is one way to reduce the number of words. For example, different tenses of words (teach, teaching, taught) would all be reduced to a single stem (teach). Stemming can be easily implemented and does reduce the number of unique terms.
+
+```{r stemming}
+library(SnowballC)
+word_count_no_stop_words_test <- tbl %>% 
+  unnest_tokens(word, text) %>% 
+  filter(!str_detect(word, "^[0-9]*$")) %>% mutate(word = wordStem(word)) %>% 
+  anti_join(stop_words) %>% count(word, sort = TRUE)
+
+dim(word_count_no_stop_words)
+dim(word_count_no_stop_words_test )
+```
+
+#### However, there are two potential problems (even if we ignore potential computational problems). 
+#### 1. Words sharing the same stem may have different frequency of words following it. 
+#### 2. Every word in the n-gram would be reduced to a word stem, so the output would also be a word stem. It probably doesn't make sense to return a word stem.
