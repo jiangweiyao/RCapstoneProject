@@ -1,4 +1,4 @@
-**Text Prediction App for R Capstone Project**
+*Text Prediction App for R Capstone Project*
 
 This App and presentation is for fulfillment of the R Capstone Project.
 
